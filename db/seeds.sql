@@ -20,12 +20,12 @@ VALUES (1, 'HR Manager', 75000, 1),
 /* Employee Seed Data */
 INSERT INTO employees (id, first_name, last_name, role_id, manager_id)
 VALUES (1, 'Elena', 'Gomez', 1, NULL),
-       (2, 'Hiroshi', 'Yamada', 2, 1),
-       (3, 'Fatima', 'Abdullah', 3, 7),
-       (4, 'Lucas', 'Silva', 4, NULL),
-       (5, 'Mehmet', 'Kaya', 5, 1),
-       (6, 'Yuan', 'Chen', 6, 2),
-       (7, 'Maria', 'Santos', 7, 1),
-       (8, 'Aisha', 'Khan', 8, 4);
+       (2, 'Lucas', 'Silva', 4, NULL),
+       (3, 'Maria', 'Santos', 7, 1),
+       (4, 'Hiroshi', 'Yamada', 2, 1),
+       (5, 'Yuan', 'Chen', 6, 4),
+       (6, 'Fatima', 'Abdullah', 3, 3),
+       (7, 'Aisha', 'Khan', 8, 4),
+       (8, 'Mehmet', 'Kaya', 5, 1);
 
 
