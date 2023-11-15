@@ -187,7 +187,7 @@ class Queries {
         // Using subqueries. See:
             // https://www.mysqltutorial.org/mysql-subquery/
         try {
-            const [rows, fields] = await connection.promise().query(`
+            const [rows, fields] = await connection.promise().execute(`
                 SELECT
                 employees.id,
                 employees.first_name,
@@ -207,12 +207,31 @@ class Queries {
         } catch (error) {
             console.error('Error fetching employees by manager:', error);
         }
-
-
-
-
     }
 
+    async getEmployeesByDepartment(req) {
+        try {
+            const [rows, fields] = await connection.promise().query(`
+                SELECT
+                    employees.id,
+                    employees.first_name,
+                    employees.last_name,
+                    roles.title AS job_title,
+                    roles.salary,
+                    CONCAT(managers.first_name, ' ', managers.last_name) AS manager
+                FROM employees
+                JOIN roles ON employees.role_id = roles.id
+                JOIN departments ON roles.department_id = departments.id
+                LEFT JOIN employees AS managers ON employees.manager_id = managers.id
+                WHERE departments.name = ?`,
+                [req]
+            );
+            console.log(`Employees in the department '${req}':`)
+            console.table(rows);
+        } catch (error) {
+            console.error('Error fetching employees by department:', error);
+        }
+    }
 
 
 }
