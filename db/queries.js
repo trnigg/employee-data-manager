@@ -184,12 +184,12 @@ class Queries {
         try {
             let query = `
                 SELECT
-                employees.id,
-                employees.first_name,
-                employees.last_name,
-                roles.title AS job_title,
-                departments.name AS department,
-                roles.salary
+                    employees.id,
+                    employees.first_name,
+                    employees.last_name,
+                    roles.title AS job_title,
+                    departments.name AS department,
+                    roles.salary
                 FROM employees
                 JOIN roles ON employees.role_id = roles.id
                 JOIN departments ON roles.department_id = departments.id
@@ -249,8 +249,8 @@ class Queries {
     
             let managerId = null;
     
-            // Check if manager name is not 'None', find matching ID (otherwise null will be INSERTed below)
-            if (managerName.toLowerCase() !== 'none') {
+            // Check if manager name is not 'NO MANAGER', find matching ID (otherwise null will be INSERTed below)
+            if (managerName.toLowerCase() !== 'no manager') {
                 // Split the names selected from list to match DB format
                 const [managerFirstName, managerLastName] = managerName.split(' ');
     
@@ -260,7 +260,7 @@ class Queries {
                     [managerFirstName, managerLastName]
                 );
     
-                //Update manager ID with first-row result
+                // Update manager ID with first-row result
                 managerId = managerRows[0].id;
             }
     
@@ -276,6 +276,81 @@ class Queries {
         }
     }
         
+    async updateEmployeeRole(employeeName, newRoleTitle) {
+        // Split the employee name
+        const [employeeFirstName, employeeLastName] = employeeName.split(' ');
+    
+        try {
+            // Get the ID of the new role corresponding to the selected title
+            const [roleRows, roleFields] = await connection.promise().execute(
+                'SELECT id FROM roles WHERE title = ?',
+                [newRoleTitle]
+            );
+            const roleId = roleRows[0].id;
+    
+            // Update the employee's role
+            await connection.promise().execute(
+                'UPDATE employees SET role_id = ? WHERE first_name = ? AND last_name = ?',
+                [roleId, employeeFirstName, employeeLastName]
+            );
+    
+            console.log(`Employee ${employeeName}'s role updated successfully!`);
+        } catch (err) {
+            console.error('Error updating employee role:', err);
+        }
+    }
+
+    async updateEmployeeManager(employeeName, newManagerName) {
+        // first split the employee name into first and last names
+        const [employeeFirstName, employeeLastName] = employeeName.split(' ');
+    
+        let newManagerId = null;
+    
+        // Check if 'No Manager' is selected
+        if (newManagerName.toLowerCase() !== 'no manager') {
+            // Split the names selected from the list to match the DB format
+            const [managerFirstName, managerLastName] = newManagerName.split(' ');
+    
+            // Get the ID of the new manager based on first and last name
+            const [managerRows, managerFields] = await connection.promise().execute(
+                'SELECT id FROM employees WHERE first_name = ? AND last_name = ?',
+                [managerFirstName, managerLastName]
+            );
+    
+            // Update manager ID with first-row result
+            newManagerId = managerRows[0].id;
+        }
+    
+        try {
+            // Update the employee's manager
+            await connection.promise().execute(
+                'UPDATE employees SET manager_id = ? WHERE first_name = ? AND last_name = ?',
+                [newManagerId, employeeFirstName, employeeLastName]
+            );
+    
+            console.log(`Employee '${employeeName}' manager updated successfully!`);
+        } catch (err) {
+            console.error('Error updating employee manager:', err);
+        }
+    }
+
+    async deleteEmployee(employeeName) {
+        // Split employee name
+        const [employeeFirstName, employeeLastName] = employeeName.split(' ');
+    
+        try {
+            // Delete the employee from the database
+            await connection.promise().execute(
+                'DELETE FROM employees WHERE first_name = ? AND last_name = ?',
+                [employeeFirstName, employeeLastName]
+            );
+    
+            console.log(`Employee '${employeeName}' deleted successfully!`);
+        } catch (err) {
+            console.error('Error deleting employee:', err);
+        }
+    }
+
 
 }
   
