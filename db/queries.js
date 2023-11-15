@@ -129,8 +129,107 @@ class Queries {
             `, [departmentName]);
     
             console.table(rows);
+        } catch (err) {
+            console.error('Error getting department used budget:', err);
+        }
+    }
+
+    
+    async addRole(roleTitle, roleSalary, departmentName) {
+        // As choices are presented using department names, first get corresponding department ID and then use that to create role
+        try {
+            // Look up Dep ID, await response
+            const [DepRows, DepFields] = await connection.promise().execute(
+                'SELECT id FROM departments WHERE name = ?',
+                [departmentName]
+            );
+
+            // Set the departmentID as first (and only row) of results (results are always returned as arrays)
+            const departmentId = DepRows[0].id;
+
+            // Insert the role with the department ID
+            const [roleRows, roleFields] = await connection.promise().execute(
+                'INSERT INTO roles (title, salary, department_id) VALUES (?, ?, ?)',
+                [roleTitle, roleSalary, departmentId]
+            );
+
+            console.log(`Role '${roleTitle}' added successfully!`);
+        } catch (err) {
+            console.error('Error adding role:', err);
+        }
+    }
+
+    async deleteRole(req) {
+        try {
+            // Delete the role based on the provided title - same as deleteDepartment() above
+            const [rows, fields] = await connection.promise().execute(
+                'DELETE FROM roles WHERE title = ?',
+                [req]
+            );
+    
+            // Again, probably redundant
+            if (rows.affectedRows === 0) {
+                console.log(`Role '${req}' not found.`);
+            } else {
+                console.log(`Role '${req}' deleted successfully!`);
+            }
+        } catch (err) {
+            console.error('Error deleting role:', err);
+        }
+    }
+
+    async getEmployeesByManager(req) {
+        // first split at space the concocted manager name into first and last names
+        const [managerFirstName, managerLastName] = req.split(' ');
+
+
+        // Get employees where the manager id matches the employee id of the manage requested above
+        // Using subqueries. See:
+            // https://www.mysqltutorial.org/mysql-subquery/
+        try {
+            const [rows, fields] = await connection.promise().execute(`
+                SELECT
+                employees.id,
+                employees.first_name,
+                employees.last_name,
+                roles.title AS job_title,
+                departments.name AS department,
+                roles.salary
+                FROM employees
+                JOIN roles ON employees.role_id = roles.id
+                JOIN departments ON roles.department_id = departments.id
+                WHERE manager_id
+                IN (SELECT id FROM employees WHERE first_name = ? AND last_name = ?)`,
+                [managerFirstName, managerLastName]
+            );
+            console.log(`Employees managed by '${req}':`)
+            console.table(rows);
         } catch (error) {
-            console.error('Error getting department used budget:', error);
+            console.error('Error fetching employees by manager:', error);
+        }
+    }
+
+    async getEmployeesByDepartment(req) {
+        try {
+            const [rows, fields] = await connection.promise().query(`
+                SELECT
+                    employees.id,
+                    employees.first_name,
+                    employees.last_name,
+                    roles.title AS job_title,
+                    roles.salary,
+                    CONCAT(managers.first_name, ' ', managers.last_name) AS manager
+                FROM employees
+                JOIN roles ON employees.role_id = roles.id
+                JOIN departments ON roles.department_id = departments.id
+                LEFT JOIN employees AS managers ON employees.manager_id = managers.id
+                WHERE departments.name = ?`,
+                [req]
+            );
+            console.log(`Employees in the department '${req}':`)
+            console.table(rows);
+        } catch (error) {
+            console.error('Error fetching employees by department:', error);
         }
     }
 
