@@ -179,13 +179,10 @@ class Queries {
     async getEmployeesByManager(req) {
         // first split at space the concocted manager name into first and last names
         const [managerFirstName, managerLastName] = req.split(' ');
-
-
-        // Get employees where the manager id matches the employee id of the manage requested above
-        // Using subqueries. See:
-            // https://www.mysqltutorial.org/mysql-subquery/
+    
+        // Split the query and append WHERE depending on whether or not req = 'no manager'
         try {
-            const [rows, fields] = await connection.promise().execute(`
+            let query = `
                 SELECT
                 employees.id,
                 employees.first_name,
@@ -196,10 +193,18 @@ class Queries {
                 FROM employees
                 JOIN roles ON employees.role_id = roles.id
                 JOIN departments ON roles.department_id = departments.id
-                WHERE manager_id
-                IN (SELECT id FROM employees WHERE first_name = ? AND last_name = ?)`,
-                [managerFirstName, managerLastName]
-            );
+                `;
+    
+            // Check if 'No Manager' is selected
+            if (req.toLowerCase() === 'no manager') {
+                query += 'WHERE manager_id IS NULL';
+            } else {
+                // 'No Manager' is not selected, filter by manager name
+                query += 'WHERE manager_id IN (SELECT id FROM employees WHERE first_name = ? AND last_name = ?)';
+            }
+    
+            const [rows, fields] = await connection.promise().execute(query, [managerFirstName, managerLastName]);
+    
             console.log(`Employees managed by '${req}':`)
             console.table(rows);
         } catch (err) {
