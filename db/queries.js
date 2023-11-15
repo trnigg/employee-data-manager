@@ -50,9 +50,9 @@ class Queries {
             .catch(err => console.log(err))
     }
 
-    getAllRoles() {
+    getAllEmployees() {
         // Using left join as failsafe to include roles in case they haven't been assigned a department
-        // Requires joining both 'departments' and 'roles' table
+        // Requires joining both 'departments' and 'roles' table to employee
         // For managers, requires left-joining the employee table w an alias (to include employees w manager = null)
         connection.promise().query(`
             SELECT
@@ -74,18 +74,66 @@ class Queries {
             .catch(err => console.log(err))
     }
 
-    async addDepartment(newDepartmentName) {
+    // TODO: Refactor prior queries to also use async/await for consistency.
+    async addDepartment(req) {
+        // Take req passed from cli.handleAdditionalInput and insert into prepared statement to add department
         try {
             const [rows, fields] = await connection.promise().execute(
                 'INSERT INTO departments (name) VALUES (?)',
-                [newDepartmentName]
+                [req]
             );
 
-            console.log(`Department '${newDepartmentName}' added successfully!`);
-        } catch (error) {
-            console.error('Error adding department:', error);
+            console.log(`Department '${req}' added successfully!`);
+        } catch (err) {
+            console.error('Error adding department:', err);
         }
     }
+
+    async deleteDepartment(req) {
+        // Take req passed from cli.handleAdditionalInput and insert into prepared statement to delete department
+        try {
+            const [rows, fields] = await connection.promise().execute(
+                'DELETE FROM departments WHERE name = ?',
+                [req]
+            );
+    
+            // If department names don't match, no rows should be affected; return error.
+            // This should be redundant as departments are chosen from list
+            if (rows.affectedRows === 0) {
+                console.log(`Department '${req}' not found.`);
+            } else {
+                console.log(`Department '${req}' deleted successfully!`);
+            }
+        } catch (err) {
+            console.error('Error deleting department:', err);
+        }
+    }
+
+    // TO DO - create response for when a (new) department isn't using a budget (i.e. has no employees)
+    async getDepartmentUsedBudget(departmentName) {
+        // Get department budget used for slected apartment using prepared statement and req from cli.handleAdditionalInput
+        // requires joining the three tables, getting sum of all salaries for employees in specified department.
+        try {
+            const [rows, fields] = await connection.promise().execute(`
+                SELECT
+                    departments.name AS department,
+                    SUM(roles.salary) AS used_budget
+                FROM
+                    employees
+                JOIN roles ON employees.role_id = roles.id
+                JOIN departments ON roles.department_id = departments.id
+                WHERE
+                    departments.name = ?
+                GROUP BY
+                    departments.name;
+            `, [departmentName]);
+    
+            console.table(rows);
+        } catch (error) {
+            console.error('Error getting department used budget:', error);
+        }
+    }
+
 
 }
   
