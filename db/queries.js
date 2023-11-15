@@ -9,9 +9,7 @@ const mysql = require('mysql2');
 const connection = mysql.createConnection(
     {
       host: "localhost",
-      // MySQL username,
       user: "root",
-      // MySQL password
       password: "!System500",
       database: "hr_db",
     },
@@ -181,31 +179,36 @@ class Queries {
     async getEmployeesByManager(req) {
         // first split at space the concocted manager name into first and last names
         const [managerFirstName, managerLastName] = req.split(' ');
-
-
-        // Get employees where the manager id matches the employee id of the manage requested above
-        // Using subqueries. See:
-            // https://www.mysqltutorial.org/mysql-subquery/
+    
+        // Split the query and append WHERE depending on whether or not req = 'no manager'
         try {
-            const [rows, fields] = await connection.promise().execute(`
+            let query = `
                 SELECT
-                employees.id,
-                employees.first_name,
-                employees.last_name,
-                roles.title AS job_title,
-                departments.name AS department,
-                roles.salary
+                    employees.id,
+                    employees.first_name,
+                    employees.last_name,
+                    roles.title AS job_title,
+                    departments.name AS department,
+                    roles.salary
                 FROM employees
                 JOIN roles ON employees.role_id = roles.id
                 JOIN departments ON roles.department_id = departments.id
-                WHERE manager_id
-                IN (SELECT id FROM employees WHERE first_name = ? AND last_name = ?)`,
-                [managerFirstName, managerLastName]
-            );
+                `;
+    
+            // Check if 'No Manager' is selected
+            if (req.toLowerCase() === 'no manager') {
+                query += 'WHERE manager_id IS NULL';
+            } else {
+                // 'No Manager' is not selected, filter by manager name
+                query += 'WHERE manager_id IN (SELECT id FROM employees WHERE first_name = ? AND last_name = ?)';
+            }
+    
+            const [rows, fields] = await connection.promise().execute(query, [managerFirstName, managerLastName]);
+    
             console.log(`Employees managed by '${req}':`)
             console.table(rows);
-        } catch (error) {
-            console.error('Error fetching employees by manager:', error);
+        } catch (err) {
+            console.error('Error fetching employees by manager:', err);
         }
     }
 
@@ -228,8 +231,123 @@ class Queries {
             );
             console.log(`Employees in the department '${req}':`)
             console.table(rows);
-        } catch (error) {
-            console.error('Error fetching employees by department:', error);
+        } catch (err) {
+            console.error('Error fetching employees by department:', err);
+        }
+    }
+
+    // TODO in future: This could be refactored by using subqueries, i.e. nesting SELECTs within INSERT
+    async addEmployee(firstName, lastName, roleTitle, managerName) {
+
+        try {
+            // Get ID of role corresponding to selected title from db
+            const [roleRows, roleFields] = await connection.promise().execute(
+                'SELECT id FROM roles WHERE title = ?',
+                [roleTitle]
+            );
+            const roleId = roleRows[0].id;
+    
+            let managerId = null;
+    
+            // Check if manager name is not 'NO MANAGER', find matching ID (otherwise null will be INSERTed below)
+            if (managerName.toLowerCase() !== 'no manager') {
+                // Split the names selected from list to match DB format
+                const [managerFirstName, managerLastName] = managerName.split(' ');
+    
+                // Get the ID of the manager based on first and last name
+                const [managerRows, managerFields] = await connection.promise().execute(
+                    'SELECT id FROM employees WHERE first_name = ? AND last_name = ?',
+                    [managerFirstName, managerLastName]
+                );
+    
+                // Update manager ID with first-row result
+                managerId = managerRows[0].id;
+            }
+    
+            // Using name entered and fields selected/process above, try to add an employee
+            const [employeeRows, employeeFields] = await connection.promise().execute(
+                'INSERT INTO employees (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)',
+                [firstName, lastName, roleId, managerId]
+            );
+    
+            console.log(`Employee '${firstName} ${lastName}' added successfully!`);
+        } catch (err) {
+            console.error('Error adding employee:', err);
+        }
+    }
+        
+    async updateEmployeeRole(employeeName, newRoleTitle) {
+        // Split the employee name
+        const [employeeFirstName, employeeLastName] = employeeName.split(' ');
+    
+        try {
+            // Get the ID of the new role corresponding to the selected title
+            const [roleRows, roleFields] = await connection.promise().execute(
+                'SELECT id FROM roles WHERE title = ?',
+                [newRoleTitle]
+            );
+            const roleId = roleRows[0].id;
+    
+            // Update the employee's role
+            await connection.promise().execute(
+                'UPDATE employees SET role_id = ? WHERE first_name = ? AND last_name = ?',
+                [roleId, employeeFirstName, employeeLastName]
+            );
+    
+            console.log(`Employee ${employeeName}'s role updated successfully!`);
+        } catch (err) {
+            console.error('Error updating employee role:', err);
+        }
+    }
+
+    async updateEmployeeManager(employeeName, newManagerName) {
+        // first split the employee name into first and last names
+        const [employeeFirstName, employeeLastName] = employeeName.split(' ');
+    
+        let newManagerId = null;
+    
+        // Check if 'No Manager' is selected
+        if (newManagerName.toLowerCase() !== 'no manager') {
+            // Split the names selected from the list to match the DB format
+            const [managerFirstName, managerLastName] = newManagerName.split(' ');
+    
+            // Get the ID of the new manager based on first and last name
+            const [managerRows, managerFields] = await connection.promise().execute(
+                'SELECT id FROM employees WHERE first_name = ? AND last_name = ?',
+                [managerFirstName, managerLastName]
+            );
+    
+            // Update manager ID with first-row result
+            newManagerId = managerRows[0].id;
+        }
+    
+        try {
+            // Update the employee's manager
+            await connection.promise().execute(
+                'UPDATE employees SET manager_id = ? WHERE first_name = ? AND last_name = ?',
+                [newManagerId, employeeFirstName, employeeLastName]
+            );
+    
+            console.log(`Employee '${employeeName}' manager updated successfully!`);
+        } catch (err) {
+            console.error('Error updating employee manager:', err);
+        }
+    }
+
+    async deleteEmployee(employeeName) {
+        // Split employee name
+        const [employeeFirstName, employeeLastName] = employeeName.split(' ');
+    
+        try {
+            // Delete the employee from the database
+            await connection.promise().execute(
+                'DELETE FROM employees WHERE first_name = ? AND last_name = ?',
+                [employeeFirstName, employeeLastName]
+            );
+    
+            console.log(`Employee '${employeeName}' deleted successfully!`);
+        } catch (err) {
+            console.error('Error deleting employee:', err);
         }
     }
 
