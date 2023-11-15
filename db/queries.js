@@ -129,11 +129,54 @@ class Queries {
             `, [departmentName]);
     
             console.table(rows);
-        } catch (error) {
-            console.error('Error getting department used budget:', error);
+        } catch (err) {
+            console.error('Error getting department used budget:', err);
         }
     }
 
+    
+    async addRole(roleTitle, roleSalary, departmentName) {
+        // As choices are presented using department names, first get corresponding department ID and then use that to create role
+        try {
+            // Look up Dep ID, await response
+            const [DepRows, DepFields] = await connection.promise().execute(
+                'SELECT id FROM departments WHERE name = ?',
+                [departmentName]
+            );
+
+            // Set the departmentID as first (and only row) of results (results are always returned as arrays)
+            const departmentId = DepRows[0].id;
+
+            // Insert the role with the department ID
+            const [roleRows, roleFields] = await connection.promise().execute(
+                'INSERT INTO roles (title, salary, department_id) VALUES (?, ?, ?)',
+                [roleTitle, roleSalary, departmentId]
+            );
+
+            console.log(`Role '${roleTitle}' added successfully!`);
+        } catch (err) {
+            console.error('Error adding role:', err);
+        }
+    }
+
+    async deleteRole(req) {
+        try {
+            // Delete the role based on the provided title - same as deleteDepartment() above
+            const [rows, fields] = await connection.promise().execute(
+                'DELETE FROM roles WHERE title = ?',
+                [req]
+            );
+    
+            // Again, probably redundant
+            if (rows.affectedRows === 0) {
+                console.log(`Role '${req}' not found.`);
+            } else {
+                console.log(`Role '${req}' deleted successfully!`);
+            }
+        } catch (err) {
+            console.error('Error deleting role:', err);
+        }
+    }
 
 }
   
