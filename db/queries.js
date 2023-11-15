@@ -178,6 +178,43 @@ class Queries {
         }
     }
 
+    async getEmployeesByManager(req) {
+        // first split at space the concocted manager name into first and last names
+        const [managerFirstName, managerLastName] = req.split(' ');
+
+
+        // Get employees where the manager id matches the employee id of the manage requested above
+        // Using subqueries. See:
+            // https://www.mysqltutorial.org/mysql-subquery/
+        try {
+            const [rows, fields] = await connection.promise().query(`
+                SELECT
+                employees.id,
+                employees.first_name,
+                employees.last_name,
+                roles.title AS job_title,
+                departments.name AS department,
+                roles.salary
+                FROM employees
+                JOIN roles ON employees.role_id = roles.id
+                JOIN departments ON roles.department_id = departments.id
+                WHERE manager_id
+                IN (SELECT id FROM employees WHERE first_name = ? AND last_name = ?)`,
+                [managerFirstName, managerLastName]
+            );
+            console.log(`Employees managed by '${req}':`)
+            console.table(rows);
+        } catch (error) {
+            console.error('Error fetching employees by manager:', error);
+        }
+
+
+
+
+    }
+
+
+
 }
   
   
