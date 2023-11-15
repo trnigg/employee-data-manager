@@ -9,9 +9,7 @@ const mysql = require('mysql2');
 const connection = mysql.createConnection(
     {
       host: "localhost",
-      // MySQL username,
       user: "root",
-      // MySQL password
       password: "!System500",
       database: "hr_db",
     },
@@ -204,8 +202,8 @@ class Queries {
             );
             console.log(`Employees managed by '${req}':`)
             console.table(rows);
-        } catch (error) {
-            console.error('Error fetching employees by manager:', error);
+        } catch (err) {
+            console.error('Error fetching employees by manager:', err);
         }
     }
 
@@ -228,11 +226,51 @@ class Queries {
             );
             console.log(`Employees in the department '${req}':`)
             console.table(rows);
-        } catch (error) {
-            console.error('Error fetching employees by department:', error);
+        } catch (err) {
+            console.error('Error fetching employees by department:', err);
         }
     }
 
+    // TODO in future: This could be refactored by using subqueries, i.e. nesting SELECTs within INSERT
+    async addEmployee(firstName, lastName, roleTitle, managerName) {
+
+        try {
+            // Get ID of role corresponding to selected title from db
+            const [roleRows, roleFields] = await connection.promise().execute(
+                'SELECT id FROM roles WHERE title = ?',
+                [roleTitle]
+            );
+            const roleId = roleRows[0].id;
+    
+            let managerId = null;
+    
+            // Check if manager name is not 'None', find matching ID (otherwise null will be INSERTed below)
+            if (managerName.toLowerCase() !== 'none') {
+                // Split the names selected from list to match DB format
+                const [managerFirstName, managerLastName] = managerName.split(' ');
+    
+                // Get the ID of the manager based on first and last name
+                const [managerRows, managerFields] = await connection.promise().execute(
+                    'SELECT id FROM employees WHERE first_name = ? AND last_name = ?',
+                    [managerFirstName, managerLastName]
+                );
+    
+                //Update manager ID with first-row result
+                managerId = managerRows[0].id;
+            }
+    
+            // Using name entered and fields selected/process above, try to add an employee
+            const [employeeRows, employeeFields] = await connection.promise().execute(
+                'INSERT INTO employees (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)',
+                [firstName, lastName, roleId, managerId]
+            );
+    
+            console.log(`Employee '${firstName} ${lastName}' added successfully!`);
+        } catch (err) {
+            console.error('Error adding employee:', err);
+        }
+    }
+        
 
 }
   
