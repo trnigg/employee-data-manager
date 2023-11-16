@@ -12,10 +12,6 @@ const mysql = require('mysql2'); // For mysql queries and prepared statments
 const chalk = require('chalk') // Module for changing console.log colours
 const displayTable = require('../lib/tables'); // My module for formatting query-results
 
-// using createConnection instead of pooling as only one simultanous connection to the db is required.
-    // https://stackoverflow.com/questions/18496540/node-js-mysql-connection-pooling?rq=3
-
-
 // DEFINE VALUES FOR CREATING CONNECTION
     // using createConnection instead of pooling as only one simultanous connection to the db is required.
     // https://stackoverflow.com/questions/18496540/node-js-mysql-connection-pooling?rq=3
