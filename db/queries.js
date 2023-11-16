@@ -36,9 +36,9 @@ class Queries {
           const employees = await connection.promise().query('SELECT CONCAT(first_name, " ", last_name) AS full_name FROM employees');
           const roles = await connection.promise().query('SELECT title FROM roles');
           const managers = await connection.promise().query(`
-            SELECT CONCAT(first_name, " ", last_name) AS manager_name
-            FROM employees
-            WHERE id IN (SELECT DISTINCT manager_id FROM employees WHERE manager_id IS NOT NULL)
+                SELECT CONCAT(first_name, " ", last_name) AS manager_name
+                FROM employees
+                WHERE id IN (SELECT DISTINCT manager_id FROM employees WHERE manager_id IS NOT NULL)
           `); // Uses a subquery. DISTINCT returns unique cases to avoid repetition.
           const departments = await connection.promise().query('SELECT name FROM departments');
     
@@ -72,9 +72,9 @@ class Queries {
         // Using left join as failsafe to include roles in case they haven't been assigned a department
         try {
             const [rows, fields] = await connection.promise().query(`
-              SELECT roles.id, roles.title, departments.name AS department, roles.salary
-              FROM roles
-              LEFT JOIN departments ON roles.department_id = departments.id
+                SELECT roles.id, roles.title, departments.name AS department, roles.salary
+                FROM roles
+                LEFT JOIN departments ON roles.department_id = departments.id
             `);
             displayTable(rows);
           } catch (err) {
@@ -83,31 +83,32 @@ class Queries {
     }
 
     // METHOD FOR RETURNING TABLE OF ALL EMPLOYEES
-    getAllEmployees() {
+    async getAllEmployees() {
         // Using left join as failsafe to include roles in case they haven't been assigned a department
         // Requires joining both 'departments' and 'roles' table to employee
         // For managers, requires left-joining the employee table w an alias (to include employees w manager = null)
-        connection.promise().query(`
-            SELECT
-                employees.id,
-                employees.first_name,
-                employees.last_name,
-                roles.title AS job_title,
-                departments.name AS department,
-                roles.salary,
+        try {
+            const [rows, fields] = await connection.promise().query(`
+                SELECT
+                    employees.id,
+                    employees.first_name,
+                    employees.last_name,
+                    roles.title AS job_title,
+                    departments.name AS department,
+                    roles.salary,
                 CONCAT(managers.first_name, ' ', managers.last_name) AS manager
-            FROM employees
-            JOIN roles ON employees.role_id = roles.id
-            JOIN departments ON roles.department_id = departments.id
-            LEFT JOIN employees AS managers ON employees.manager_id = managers.id
-        `)
-            .then( ([rows,fields]) => {
-                displayTable(rows);
-            })
-            .catch(err => console.log(err))
+                FROM employees
+                JOIN roles ON employees.role_id = roles.id
+                JOIN departments ON roles.department_id = departments.id
+                LEFT JOIN employees AS managers ON employees.manager_id = managers.id
+            `);
+            displayTable(rows);
+          } catch (err) {
+            console.error('Error fetching employees:', err);
+          }
     }
 
-    // TODO: Refactor prior queries to also use async/await for consistency.
+    // METHOD FOR ADDING NEW DEPARTMENT
     async addDepartment(req) {
         // Take req passed from cli.handleAdditionalInput and insert into prepared statement to add department
         try {
@@ -122,6 +123,7 @@ class Queries {
         }
     }
 
+    // METHOD FOR DELETEING DEPARTMENT
     async deleteDepartment(req) {
         // Take req passed from cli.handleAdditionalInput and insert into prepared statement to delete department
         try {
@@ -142,7 +144,7 @@ class Queries {
         }
     }
 
-    // TO DO - create response for when a (new) department isn't using a budget (i.e. has no employees)
+    // METHOD FOR GET DEPARTMENT BUDGETS USED
     async getDepartmentUsedBudget(departmentName) {
         // Get department budget used for slected apartment using prepared statement and req from cli.handleAdditionalInput
         // requires joining the three tables, getting sum of all salaries for employees in specified department.
@@ -167,7 +169,7 @@ class Queries {
         }
     }
 
-    
+    // METHOD FOR ADDING ROLE
     async addRole(roleTitle, roleSalary, departmentName) {
         // As choices are presented using department names, first get corresponding department ID and then use that to create role
         try {
@@ -192,6 +194,7 @@ class Queries {
         }
     }
 
+    // METHOD FOR DELETING ROLE
     async deleteRole(req) {
         try {
             // Delete the role based on the provided title - same as deleteDepartment() above
@@ -211,8 +214,9 @@ class Queries {
         }
     }
 
+    // METHOD FOR RETURNING EMPLOYEES BY MANAGER
     async getEmployeesByManager(req) {
-        // first split at space the concocted manager name into first and last names
+        // split at space the concocted manager name into first and last names
         const [managerFirstName, managerLastName] = req.split(' ');
     
         // Split the query and append WHERE depending on whether or not req = 'no manager'
@@ -246,6 +250,7 @@ class Queries {
         }
     }
 
+    // METHOD FOR RETURNING EMPLOYEES BY DEPARTMENT
     async getEmployeesByDepartment(req) {
         try {
             const [rows, fields] = await connection.promise().query(`
@@ -269,6 +274,7 @@ class Queries {
         }
     }
 
+    // METHOD FOR ADDING NEW EMPLOYEE WITH OR WITHOUT A MANAGER
     // TODO in future: This could be refactored by using subqueries, i.e. nesting SELECTs within INSERT
     async addEmployee(firstName, lastName, roleTitle, managerName) {
 
@@ -308,7 +314,8 @@ class Queries {
             console.error('Error adding employee:', err);
         }
     }
-        
+    
+    // METHOD FOR UPDATING EMPLOYEE ROLE
     async updateEmployeeRole(employeeName, newRoleTitle) {
         // Split the employee name
         const [employeeFirstName, employeeLastName] = employeeName.split(' ');
@@ -333,6 +340,7 @@ class Queries {
         }
     }
 
+    // METHOD FOR UPDATING EMPLOYEE MANAGER - can also be no manager
     async updateEmployeeManager(employeeName, newManagerName) {
         // first split the employee name into first and last names
         const [employeeFirstName, employeeLastName] = employeeName.split(' ');
@@ -367,6 +375,7 @@ class Queries {
         }
     }
 
+    // METHOD FOR DELETING EMPLOYEE
     async deleteEmployee(employeeName) {
         // Split employee name
         const [employeeFirstName, employeeLastName] = employeeName.split(' ');
@@ -383,7 +392,6 @@ class Queries {
             console.error('Error deleting employee:', err);
         }
     }
-
 
 }
   
