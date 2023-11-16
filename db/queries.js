@@ -1,24 +1,24 @@
+// TO DO IN FUTURE: With more time, codebase would benefit from a refactor to modularise methods further, and move related queries to subclasses.
 
-// Module for queries/prepared statments
-const mysql = require('mysql2');
-// mysql2 
-        // docs on prepared statements:
-            // https://www.npmjs.com/package/mysql2?activeTab=readme#using-prepared-statements
-        // on promise-wrapper to upgrade non promise connection to promise:
-            // https://www.npmjs.com/package/mysql2/v/3.6.3#using-promise-wrapper
-    // MySQL doc for queries:
-        // https://dev.mysql.com/doc/refman/8.0/en/select.html
-
-// My module for formatting query-results
-const displayTable = require('../lib/tables');
-
-// Module for changing console.log colours:
-const chalk = require('chalk')
+// MODULES
+const mysql = require('mysql2'); // For mysql queries and prepared statments
+    // See for reference
+            // docs on prepared statements:
+                // https://www.npmjs.com/package/mysql2?activeTab=readme#using-prepared-statements
+            // on promise-wrapper to upgrade non promise connection to promise:
+                // https://www.npmjs.com/package/mysql2/v/3.6.3#using-promise-wrapper
+        // MySQL doc for queries:
+            // https://dev.mysql.com/doc/refman/8.0/en/select.html
+const chalk = require('chalk') // Module for changing console.log colours
+const displayTable = require('../lib/tables'); // My module for formatting query-results
 
 // using createConnection instead of pooling as only one simultanous connection to the db is required.
     // https://stackoverflow.com/questions/18496540/node-js-mysql-connection-pooling?rq=3
 
 
+// DEFINE VALUES FOR CREATING CONNECTION
+    // using createConnection instead of pooling as only one simultanous connection to the db is required.
+    // https://stackoverflow.com/questions/18496540/node-js-mysql-connection-pooling?rq=3
 const connection = mysql.createConnection(
     {
       host: "localhost",
@@ -56,29 +56,33 @@ class Queries {
         }
       }
 
-    getAllDepartments() {
-        // Query to show department id and department names
-        connection.promise().query('SELECT * FROM departments')
-            .then( ([rows,fields]) => {
-                displayTable(rows);
-            })
-            .catch(err => console.log(err))
-    }
+    // METHOD FOR RETURNING TABLE OF ALL DEPARTMENTS
+    async getAllDepartments() {
+        try {
+          const [rows, fields] = await connection.promise().query('SELECT * FROM departments');
+          displayTable(rows);
+        } catch (err) {
+          console.error('Error fetching departments:', err);
+        }
+      }
 
-    getAllRoles() {
+    // METHOD FOR RETURNING TABLE OF ALL ROLES
+    async getAllRoles() {
         // Query to show role id, job title, the department that role belongs to, and the salary for that role
         // Using left join as failsafe to include roles in case they haven't been assigned a department
-        connection.promise().query(`
-            SELECT roles.id, roles.title, departments.name AS department, roles.salary
-            FROM roles
-            LEFT JOIN departments ON roles.department_id = departments.id
-        `)
-            .then( ([rows,fields]) => {
-                displayTable(rows);
-            })
-            .catch(err => console.log(err))
+        try {
+            const [rows, fields] = await connection.promise().query(`
+              SELECT roles.id, roles.title, departments.name AS department, roles.salary
+              FROM roles
+              LEFT JOIN departments ON roles.department_id = departments.id
+            `);
+            displayTable(rows);
+          } catch (err) {
+            console.error('Error fetching roles:', err);
+          }
     }
 
+    // METHOD FOR RETURNING TABLE OF ALL EMPLOYEES
     getAllEmployees() {
         // Using left join as failsafe to include roles in case they haven't been assigned a department
         // Requires joining both 'departments' and 'roles' table to employee
