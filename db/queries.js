@@ -1,10 +1,23 @@
+
+// Module for queries/prepared statments
 const mysql = require('mysql2');
+// mysql2 
+        // docs on prepared statements:
+            // https://www.npmjs.com/package/mysql2?activeTab=readme#using-prepared-statements
+        // on promise-wrapper to upgrade non promise connection to promise:
+            // https://www.npmjs.com/package/mysql2/v/3.6.3#using-promise-wrapper
+    // MySQL doc for queries:
+        // https://dev.mysql.com/doc/refman/8.0/en/select.html
 
-// Use pooling?
-// https://stackoverflow.com/questions/18496540/node-js-mysql-connection-pooling?rq=3
+// My module for formatting query-results
+const displayTable = require('../lib/tables');
+
+// Module for changing console.log colours:
+const chalk = require('chalk')
+
 // using createConnection instead of pooling as only one simultanous connection to the db is required.
+    // https://stackoverflow.com/questions/18496540/node-js-mysql-connection-pooling?rq=3
 
-// https://www.npmjs.com/package/mysql2/v/3.6.3#using-promise-wrapper
 
 const connection = mysql.createConnection(
     {
@@ -17,19 +30,11 @@ const connection = mysql.createConnection(
   
 class Queries {
 
-    // mysql2 
-        // docs on prepared statements:
-            // https://www.npmjs.com/package/mysql2?activeTab=readme#using-prepared-statements
-        // on promise-wrapper to upgrade non promise connection to promise:
-            // https://www.npmjs.com/package/mysql2/v/3.6.3#using-promise-wrapper
-    // MySQL doc for queries:
-        // https://dev.mysql.com/doc/refman/8.0/en/select.html
-
     getAllDepartments() {
         // Query to show department id and department names
         connection.promise().query('SELECT * FROM departments')
             .then( ([rows,fields]) => {
-                console.table(rows);
+                displayTable(rows);
             })
             .catch(err => console.log(err))
     }
@@ -43,7 +48,7 @@ class Queries {
             LEFT JOIN departments ON roles.department_id = departments.id
         `)
             .then( ([rows,fields]) => {
-                console.table(rows);
+                displayTable(rows);
             })
             .catch(err => console.log(err))
     }
@@ -67,7 +72,7 @@ class Queries {
             LEFT JOIN employees AS managers ON employees.manager_id = managers.id
         `)
             .then( ([rows,fields]) => {
-                console.table(rows);
+                displayTable(rows);
             })
             .catch(err => console.log(err))
     }
@@ -81,7 +86,7 @@ class Queries {
                 [req]
             );
 
-            console.log(`Department '${req}' added successfully!`);
+            console.log(chalk.green(`Department ${chalk.cyan.bold(req)} successfully added!`));
         } catch (err) {
             console.error('Error adding department:', err);
         }
@@ -100,7 +105,7 @@ class Queries {
             if (rows.affectedRows === 0) {
                 console.log(`Department '${req}' not found.`);
             } else {
-                console.log(`Department '${req}' deleted successfully!`);
+                console.log(chalk.green(`Department ${chalk.cyan.bold(req)} successfully deleted!`));
             }
         } catch (err) {
             console.error('Error deleting department:', err);
@@ -126,7 +131,7 @@ class Queries {
                     departments.name;
             `, [departmentName]);
     
-            console.table(rows);
+            displayTable(rows);
         } catch (err) {
             console.error('Error getting department used budget:', err);
         }
@@ -151,7 +156,7 @@ class Queries {
                 [roleTitle, roleSalary, departmentId]
             );
 
-            console.log(`Role '${roleTitle}' added successfully!`);
+            console.log(chalk.green(`Role ${chalk.cyan.bold(roleTitle)} successfully added!`));
         } catch (err) {
             console.error('Error adding role:', err);
         }
@@ -169,7 +174,7 @@ class Queries {
             if (rows.affectedRows === 0) {
                 console.log(`Role '${req}' not found.`);
             } else {
-                console.log(`Role '${req}' deleted successfully!`);
+                console.log(chalk.green(`Role ${chalk.cyan.bold(req)} successfully deleted!`));
             }
         } catch (err) {
             console.error('Error deleting role:', err);
@@ -205,8 +210,7 @@ class Queries {
     
             const [rows, fields] = await connection.promise().execute(query, [managerFirstName, managerLastName]);
     
-            console.log(`Employees managed by '${req}':`)
-            console.table(rows);
+            displayTable(rows);
         } catch (err) {
             console.error('Error fetching employees by manager:', err);
         }
@@ -229,8 +233,7 @@ class Queries {
                 WHERE departments.name = ?`,
                 [req]
             );
-            console.log(`Employees in the department '${req}':`)
-            console.table(rows);
+            displayTable(rows);
         } catch (err) {
             console.error('Error fetching employees by department:', err);
         }
@@ -270,7 +273,7 @@ class Queries {
                 [firstName, lastName, roleId, managerId]
             );
     
-            console.log(`Employee '${firstName} ${lastName}' added successfully!`);
+            console.log(chalk.green(`Employee ${chalk.cyan.bold(firstName + lastName)} succesfully added!`));
         } catch (err) {
             console.error('Error adding employee:', err);
         }
@@ -294,7 +297,7 @@ class Queries {
                 [roleId, employeeFirstName, employeeLastName]
             );
     
-            console.log(`Employee ${employeeName}'s role updated successfully!`);
+            console.log(chalk.green(`Employee ${chalk.cyan.bold(employeeFirstName + employeeLastName)}'s role succesfully updated!`));
         } catch (err) {
             console.error('Error updating employee role:', err);
         }
@@ -328,7 +331,7 @@ class Queries {
                 [newManagerId, employeeFirstName, employeeLastName]
             );
     
-            console.log(`Employee '${employeeName}' manager updated successfully!`);
+            console.log(chalk.green(`Employee ${chalk.cyan.bold(employeeFirstName + employeeLastName)}'s manager succesfully updated!`));
         } catch (err) {
             console.error('Error updating employee manager:', err);
         }
@@ -345,7 +348,7 @@ class Queries {
                 [employeeFirstName, employeeLastName]
             );
     
-            console.log(`Employee '${employeeName}' deleted successfully!`);
+            console.log(chalk.green(`Employee ${chalk.cyan.bold(employeeFirstName + employeeLastName)} succesfully deleted!`));
         } catch (err) {
             console.error('Error deleting employee:', err);
         }
@@ -354,7 +357,4 @@ class Queries {
 
 }
   
-  
-
-
 module.exports = Queries;
