@@ -30,6 +30,32 @@ const connection = mysql.createConnection(
   
 class Queries {
 
+    // METHOD FOR UPDATING CHOICE ARRAYS
+    async updateChoiceArrays() {
+        try {
+          const employees = await connection.promise().query('SELECT CONCAT(first_name, " ", last_name) AS full_name FROM employees');
+          const roles = await connection.promise().query('SELECT title FROM roles');
+          const managers = await connection.promise().query(`
+            SELECT CONCAT(first_name, " ", last_name) AS manager_name
+            FROM employees
+            WHERE id IN (SELECT DISTINCT manager_id FROM employees WHERE manager_id IS NOT NULL)
+          `); // Uses a subquery. DISTINCT returns unique cases to avoid repetition.
+          const departments = await connection.promise().query('SELECT name FROM departments');
+    
+          // Map results into arrays
+          const employeeArray = employees[0].map(employee => employee.full_name);
+          const roleArray = roles[0].map(role => role.title);
+          const managerArray = managers[0].map(manager => manager.manager_name);
+          const departmentArray = departments[0].map(department => department.name);
+    
+          // Return object of arrays for use in assigning choices in Prompts.js
+          return { employeeArray, roleArray, managerArray, departmentArray };
+        } catch (error) {
+          console.error('Error updating choice arrays:', error);
+          return {};
+        }
+      }
+
     getAllDepartments() {
         // Query to show department id and department names
         connection.promise().query('SELECT * FROM departments')
