@@ -72,7 +72,9 @@ To use the application:
 The prompts have been designed to make usage as intuitive as possible. For a more in-depth example of usage, please see the walkthrough video of the usage process below:
 
 ### Walkthrough Video
+Please click on the thumbnail below for a comprehensive demo of the [installation](#installation) and [usage](#usage):  
 
+[![A video thumbnail of a blank Visual Studio window with an overlayed play button.](./assets/screenshots/screenshot_thumbnail.png)](https://drive.google.com/file/d/1D_XdHCxqK9DSs8MgL8a7W81uSiwswG1t/view)
 
 ## Tests
 - The current build of this application does not include any tests.
